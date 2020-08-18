@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -44,15 +45,19 @@ func main() {
 	if maxRetryCount == 0 {
 		maxRetryCount = 3
 	}
-	msg := fmt.Sprintf(`CI build:
-repo: %s (branch: %s)
+	emoji := " ✅"
+	if strings.Contains(buildStatus.Value, "failure") {
+		emoji = "⚠️"
+	}
+	msg := fmt.Sprintf(`CI build: %s (branch: %s)
 commit: %s(%s:%s)
 event: %s:%s
-%s`,
+%s%s`,
 		repoFullname, commitBranch,
 		commitLink, commitAuthorName, commitMessage,
 		buildEvent, buildNumber,
-		buildStatus)
+		buildStatus, emoji)
+	success := false
 	for i := 0; i < maxRetryCount; i++ {
 		_, resp := c.CreatePost(&model.Post{
 			ChannelId: channel.Value,
@@ -63,7 +68,11 @@ event: %s:%s
 		}
 		log.Printf("create post failed (i:%d), %v", i, resp.Error)
 		time.Sleep(time.Duration(i) * time.Second)
+		success = true
 		continue
+	}
+	if !success {
+		os.Exit(1) //failed
 	}
 }
 
