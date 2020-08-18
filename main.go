@@ -57,23 +57,22 @@ event: %s:%s
 		commitLink, commitAuthorName, commitMessage,
 		buildEvent, buildNumber,
 		buildStatus, emoji)
-	success := false
+	osExitCode := 1
 	for i := 0; i < maxRetryCount; i++ {
-		_, resp := c.CreatePost(&model.Post{
+		p, resp := c.CreatePost(&model.Post{
 			ChannelId: channel.Value,
 			Message:   msg,
 		})
 		if resp.Error == nil {
+			osExitCode = 0
+			log.Println("post success, id:", p.Id)
 			break
 		}
 		log.Printf("create post failed (i:%d), %v", i, resp.Error)
 		time.Sleep(time.Duration(i) * time.Second)
-		success = true
 		continue
 	}
-	if !success {
-		os.Exit(1) //failed
-	}
+	os.Exit(osExitCode)
 }
 
 var (
